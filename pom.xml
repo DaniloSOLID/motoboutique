@@ -10,10 +10,10 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
 
-    <groupId>com.motobutique</groupId>
-    <artifactId>motobutique</artifactId>
+    <groupId>com.motoboutique</groupId>
+    <artifactId>motoboutique</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>MotoButique</name>
+    <name>Moto Boutique</name>
     <description>Sistema de inventario, compras y ventas para tienda de motos</description>
 
     <properties>
