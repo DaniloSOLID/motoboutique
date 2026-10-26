@@ -1,0 +1,108 @@
+# Moto Boutique
+
+Sistema web interno de **control de inventario** para una tienda de motos lineales, repuestos y accesorios (Perú): catálogo con compatibilidad por modelo de moto, stock por almacén, kardex valorizado, compras a proveedores, motocicletas con chasis y motor, alertas de stock y reportes.
+
+> No es una tienda online ni un punto de venta: no maneja carrito, cobros ni comprobantes.
+
+## Tecnología
+
+- Java 21, Maven (`mvnw`) y Spring Boot 4.1
+- Spring MVC con Thymeleaf (se renderiza en el servidor), Spring Security y Spring Data JPA
+- PostgreSQL con migraciones Flyway (`ddl-auto=validate`: el esquema solo cambia con migraciones)
+- Lombok, MapStruct y Bean Validation
+- Tailwind CSS por CDN, JavaScript vanilla y Chart.js
+
+## Requisitos
+
+- JDK 21
+- PostgreSQL 16 o superior
+- Git (en Windows, usar **Git Bash**)
+
+## Puesta en marcha
+
+1. Clonar el repositorio y entrar a la carpeta del proyecto.
+2. Crear en PostgreSQL una base de datos **vacía** llamada `motoboutique` (todo en minúsculas, codificación UTF8).
+3. Copiar `.env.example` como `.env` y completar los valores (ver la tabla de abajo). El archivo `.env` **nunca se sube a Git**.
+4. Arrancar desde la raíz del proyecto (el `.env` se lee desde la carpeta actual):
+
+   ```bash
+   ./mvnw spring-boot:run
+   ```
+
+5. Abrir <http://localhost:8081> e iniciar sesión con el correo `ADMIN_EMAIL` y la contraseña `ADMIN_PASSWORD` que pusiste en el `.env`.
+
+Al arrancar, Flyway crea las tablas y el `DataSeeder` carga los permisos, los roles base y los usuarios. El seeder se puede ejecutar muchas veces sin duplicar datos.
+
+### Variables del archivo `.env`
+
+| Variable | Para qué sirve |
+|---|---|
+| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` | Conexión a PostgreSQL (valores por defecto en `.env.example`) |
+| `DB_PASSWORD` | Contraseña de tu usuario de PostgreSQL |
+| `ADMIN_EMAIL` | Correo del administrador inicial |
+| `ADMIN_PASSWORD` | Contraseña del administrador (8 caracteres o más, sin `\`) |
+| `DEMO_PASSWORD` | Contraseña común de los usuarios demo (solo perfil `dev`; si queda vacía no se crean) |
+
+Usuarios demo (perfil `dev`): `almacenero@`, `contador@` y `consulta@` con el dominio `motoboutique.local`.
+
+## Pruebas
+
+```bash
+./mvnw test -Dtest="*Test"
+```
+
+Son pruebas unitarias y no necesitan base de datos. `MotoboutiqueApplicationTests` arranca toda la aplicación, por eso se excluye con ese patrón.
+
+## Estructura
+
+Monolito modular por capas, paquete base `com.motoboutique`:
+
+```
+com.motoboutique
+ ├─ shared/         config, exception, audit, event, util, web
+ ├─ seguridad/      usuarios, roles, permisos, autenticación
+ ├─ catalogo/       categorías, marcas, modelos de moto, productos, compatibilidad
+ ├─ inventario/     almacenes, stock, kardex, ajustes, transferencias, conteo, alertas
+ ├─ compras/        proveedores, órdenes de compra, recepciones
+ ├─ motos/          unidades con chasis y motor
+ ├─ reportes/       consultas y exportaciones
+ ├─ configuracion/  datos del negocio
+ └─ seed/           datos iniciales por fases
+```
+
+Cada módulo tiene sus capas: `web`, `service`, `repository`, `domain` y `dto`.
+
+### Reglas de arquitectura
+
+1. El **controller** solo maneja HTTP, validación y navegación. Cero lógica de negocio.
+2. El **service** contiene las reglas y es `@Transactional`. Un módulo usa a otro solo a través de la **interfaz** de su service, nunca de su repository.
+3. Las entidades no llegan a la vista: las plantillas reciben **DTOs** (MapStruct).
+4. El stock solo cambia por `InventarioService.registrarMovimiento(...)` (cuando exista). El kardex nunca se edita ni se borra.
+5. Dinero y cantidades con `BigDecimal`; nunca `double`.
+6. Toda integración externa va detrás de una interfaz (puerto).
+7. Sin `@Data` en entidades JPA: usar `@Getter` y `@Setter`.
+
+## Cómo trabajamos en equipo
+
+- **Ramas:** `main` siempre debe compilar y pasar las pruebas. Cada tarea va en su rama `feature/<modulo>-<tema>` (por ejemplo `feature/catalogo-categorias`) y se une a `main` con un Pull Request revisado por otra persona.
+- **Commits:** Conventional Commits en español, por ejemplo `feat(catalogo): agrega el listado de categorías` o `fix(seguridad): corrige el cierre de sesión`.
+- **Antes de abrir un Pull Request:** `./mvnw clean compile` y `./mvnw test -Dtest="*Test"` en verde.
+- **Migraciones Flyway:** nunca se edita una migración ya aplicada; se crea una nueva. Para que no choquen los números entre compañeros, cada módulo usa un rango de versiones:
+
+  | Módulo | Versiones |
+  |---|---|
+  | seguridad | V2 a V9 |
+  | catálogo | V10 a V19 |
+  | inventario | V20 a V29 |
+  | compras | V30 a V39 |
+  | motos | V40 a V49 |
+  | reportes, configuración y otros | V50 en adelante |
+
+- **Secretos:** ninguna contraseña, token ni llave en el repositorio. Todo va en el `.env` local o en variables de entorno. Este repositorio es público.
+- **Datos reales del negocio** (costos, listas de precios, clientes): no se suben. Usar datos de ejemplo.
+
+## Estado del proyecto
+
+- Fase 0 (proyecto base): lista.
+- Fase 1 (seguridad, layout y modo oscuro): la parte de seguridad (login, usuarios, roles, permisos y datos iniciales) está lista. Falta la parte visual: layout, fragments, modo oscuro y pantallas de acceso.
+- Siguientes fases: catálogo, inventario, compras, motocicletas, dashboard y reportes.
