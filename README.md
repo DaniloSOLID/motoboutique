@@ -1,108 +1,81 @@
 # Moto Boutique
 
-Sistema web interno de **control de inventario** para una tienda de motos lineales, repuestos y accesorios (Perú): catálogo con compatibilidad por modelo de moto, stock por almacén, kardex valorizado, compras a proveedores, motocicletas con chasis y motor, alertas de stock y reportes.
+Sistema interno de **control de inventario** para una tienda de motos y accesorios (Perú). El proyecto está separado en dos aplicaciones independientes:
 
-> No es una tienda online ni un punto de venta: no maneja carrito, cobros ni comprobantes.
+| Carpeta | Qué es | Tecnología |
+|---|---|---|
+| [`backend/`](backend) | API REST | Java 21, Spring Boot 4.1, Spring Security, Spring Data JPA, Flyway, Maven, PostgreSQL |
+| [`frontend/`](frontend) | Aplicación web (SPA) | React, TypeScript, Vite, Tailwind CSS |
 
-## Tecnología
-
-- Java 21, Maven (`mvnw`) y Spring Boot 4.1
-- Spring MVC con Thymeleaf (se renderiza en el servidor), Spring Security y Spring Data JPA
-- PostgreSQL con migraciones Flyway (`ddl-auto=validate`: el esquema solo cambia con migraciones)
-- Lombok, MapStruct y Bean Validation
-- Tailwind CSS por CDN, JavaScript vanilla y Chart.js
+Para el detalle de la arquitectura, los cambios, las pruebas y lo pendiente, lee [`PROGRESS.md`](PROGRESS.md).
 
 ## Requisitos
 
 - JDK 21
 - PostgreSQL 16 o superior
+- Node.js 20.19 o superior (o 22.12+) y npm
 - Git (en Windows, usar **Git Bash**)
 
-## Puesta en marcha
+## Ejecutar en local
 
-1. Clonar el repositorio y entrar a la carpeta del proyecto.
-2. Crear en PostgreSQL una base de datos **vacía** llamada `motoboutique` (todo en minúsculas, codificación UTF8).
-3. Copiar `.env.example` como `.env` y completar los valores (ver la tabla de abajo). El archivo `.env` **nunca se sube a Git**.
-4. Arrancar desde la raíz del proyecto (el `.env` se lee desde la carpeta actual):
+Necesitas dos terminales: una para el backend y otra para el frontend.
+
+### 1. Backend (API en el puerto 8081)
+
+1. Crea en PostgreSQL una base de datos **vacía** llamada `motoboutique` (minúsculas, codificación UTF8).
+2. Entra a la carpeta y crea el archivo de entorno:
+
+   ```bash
+   cd backend
+   cp .env.example .env
+   ```
+
+3. Edita `.env` y completa al menos `DB_PASSWORD`, `ADMIN_PASSWORD` (8 caracteres o más, sin `\`) y, si quieres usuarios de prueba, `DEMO_PASSWORD`.
+4. Arranca:
 
    ```bash
    ./mvnw spring-boot:run
    ```
 
-5. Abrir <http://localhost:8081> e iniciar sesión con el correo `ADMIN_EMAIL` y la contraseña `ADMIN_PASSWORD` que pusiste en el `.env`.
+   Flyway crea las tablas y el `DataSeeder` carga permisos, roles base y usuarios. Se puede repetir sin duplicar datos.
 
-Al arrancar, Flyway crea las tablas y el `DataSeeder` carga los permisos, los roles base y los usuarios. El seeder se puede ejecutar muchas veces sin duplicar datos.
+### 2. Frontend (puerto 5173)
 
-### Variables del archivo `.env`
+```bash
+cd frontend
+cp .env.example .env     # opcional: los valores por defecto sirven en desarrollo
+npm install
+npm run dev
+```
 
-| Variable | Para qué sirve |
-|---|---|
-| `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER` | Conexión a PostgreSQL (valores por defecto en `.env.example`) |
-| `DB_PASSWORD` | Contraseña de tu usuario de PostgreSQL |
-| `ADMIN_EMAIL` | Correo del administrador inicial |
-| `ADMIN_PASSWORD` | Contraseña del administrador (8 caracteres o más, sin `\`) |
-| `DEMO_PASSWORD` | Contraseña común de los usuarios demo (solo perfil `dev`; si queda vacía no se crean) |
+Abre <http://localhost:5173> e inicia sesión con `ADMIN_EMAIL` y `ADMIN_PASSWORD` del `.env` del backend. En desarrollo, Vite reenvía las llamadas `/api` al backend (`VITE_DEV_PROXY_TARGET`, por defecto `http://localhost:8081`), de modo que el navegador ve un solo origen y no hace falta configurar CORS.
 
-Usuarios demo (perfil `dev`): `almacenero@`, `contador@` y `consulta@` con el dominio `motoboutique.local`.
+## Compilar
+
+```bash
+# Backend: JAR ejecutable en backend/target
+cd backend && ./mvnw clean package
+
+# Frontend: archivos estáticos en frontend/dist
+cd frontend && npm run build
+```
 
 ## Pruebas
 
 ```bash
-./mvnw test -Dtest="*Test"
+cd backend && ./mvnw test -Dtest="*Test"   # pruebas unitarias, sin base de datos
 ```
 
-Son pruebas unitarias y no necesitan base de datos. `MotoboutiqueApplicationTests` arranca toda la aplicación, por eso se excluye con ese patrón.
+El frontend todavía no tiene pruebas automatizadas (ver `PROGRESS.md`); `npm run build` ejecuta la verificación de tipos de TypeScript.
 
-## Estructura
+## Variables de entorno
 
-Monolito modular por capas, paquete base `com.motoboutique`:
+**Backend** (`backend/.env`, ver `backend/.env.example`): `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASSWORD`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `DEMO_PASSWORD`, `CORS_ALLOWED_ORIGINS` y, solo en producción, `SESSION_COOKIE_SAME_SITE`.
 
-```
-com.motoboutique
- ├─ shared/         config, exception, audit, event, util, web
- ├─ seguridad/      usuarios, roles, permisos, autenticación
- ├─ catalogo/       categorías, marcas, modelos de moto, productos, compatibilidad
- ├─ inventario/     almacenes, stock, kardex, ajustes, transferencias, conteo, alertas
- ├─ compras/        proveedores, órdenes de compra, recepciones
- ├─ motos/          unidades con chasis y motor
- ├─ reportes/       consultas y exportaciones
- ├─ configuracion/  datos del negocio
- └─ seed/           datos iniciales por fases
-```
+**Frontend** (`frontend/.env`, ver `frontend/.env.example`): `VITE_API_BASE_URL` (vacío en desarrollo) y `VITE_DEV_PROXY_TARGET`.
 
-Cada módulo tiene sus capas: `web`, `service`, `repository`, `domain` y `dto`.
+Los archivos `.env` no se suben a Git. Los `.env.example` no contienen credenciales reales.
 
-### Reglas de arquitectura
+## Publicar frontend y backend
 
-1. El **controller** solo maneja HTTP, validación y navegación. Cero lógica de negocio.
-2. El **service** contiene las reglas y es `@Transactional`. Un módulo usa a otro solo a través de la **interfaz** de su service, nunca de su repository.
-3. Las entidades no llegan a la vista: las plantillas reciben **DTOs** (MapStruct).
-4. El stock solo cambia por `InventarioService.registrarMovimiento(...)` (cuando exista). El kardex nunca se edita ni se borra.
-5. Dinero y cantidades con `BigDecimal`; nunca `double`.
-6. Toda integración externa va detrás de una interfaz (puerto).
-7. Sin `@Data` en entidades JPA: usar `@Getter` y `@Setter`.
-
-## Cómo trabajamos en equipo
-
-- **Ramas:** `main` siempre debe compilar y pasar las pruebas. Cada tarea va en su rama `feature/<modulo>-<tema>` (por ejemplo `feature/catalogo-categorias`) y se une a `main` con un Pull Request revisado por otra persona.
-- **Commits:** Conventional Commits en español, por ejemplo `feat(catalogo): agrega el listado de categorías` o `fix(seguridad): corrige el cierre de sesión`.
-- **Antes de abrir un Pull Request:** `./mvnw clean compile` y `./mvnw test -Dtest="*Test"` en verde.
-- **Migraciones Flyway:** nunca se edita una migración ya aplicada; se crea una nueva. Para que no choquen los números entre compañeros, cada módulo usa un rango de versiones:
-
-  | Módulo | Versiones |
-  |---|---|
-  | seguridad | V2 a V9 |
-  | catálogo | V10 a V19 |
-  | inventario | V20 a V29 |
-  | compras | V30 a V39 |
-  | motos | V40 a V49 |
-  | reportes, configuración y otros | V50 en adelante |
-
-- **Secretos:** ninguna contraseña, token ni llave en el repositorio. Todo va en el `.env` local o en variables de entorno. Este repositorio es público.
-- **Datos reales del negocio** (costos, listas de precios, clientes): no se suben. Usar datos de ejemplo.
-
-## Estado del proyecto
-
-- Fase 0 (proyecto base): lista.
-- Fase 1 (seguridad, layout y modo oscuro): la parte de seguridad (login, usuarios, roles, permisos y datos iniciales) está lista. Falta la parte visual: layout, fragments, modo oscuro y pantallas de acceso.
-- Siguientes fases: catálogo, inventario, compras, motocicletas, dashboard y reportes.
+Lo más simple es servir ambos bajo el mismo dominio (por ejemplo un proxy inverso que reenvíe `/api` al backend). Si los publicas en dominios distintos, define `VITE_API_BASE_URL` al compilar el frontend, agrega su origen a `CORS_ALLOWED_ORIGINS` y usa `SESSION_COOKIE_SAME_SITE=none` (requiere HTTPS). Ten en cuenta que, entre dominios sin relación, el navegador no deja que el frontend lea la cookie del token CSRF; ver "Tareas pendientes" en `PROGRESS.md`.
