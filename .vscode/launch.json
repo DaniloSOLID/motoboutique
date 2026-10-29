@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-MotoboutiqueApplication<motoboutique>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.motoboutique.MotoboutiqueApplication",
+            "projectName": "motoboutique",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}
