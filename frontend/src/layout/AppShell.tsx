@@ -27,7 +27,8 @@ export function AppShell() {
     Transferencias: 'arrow', 'Conteo físico': 'check', Ajustes: 'settings', Productos: 'box',
     Motocicletas: 'bike', Importación: 'upload', Proveedores: 'users', Órdenes: 'cart',
     Recepciones: 'file', Valorización: 'chart', Kardex: 'file', Reportes: 'chart',
-    Stock: 'box', Compatibilidades: 'bike', Catálogo: 'file',
+    Stock: 'box', Compatibilidades: 'bike', Catálogo: 'file', 'Resumen de almacén': 'box',
+    'Resumen financiero': 'chart', 'Resumen de catálogo': 'file',
   }
 
   useEffect(() => {
