@@ -17,7 +17,7 @@
 @layer base {
   * { box-sizing:border-box; }
   body { margin:0; font-family:'Inter',sans-serif; background:var(--background); color:var(--text); }
-  button,input,select { font:inherit; }
+  button,input,select,textarea { font:inherit; }
   button { cursor:pointer; }
   button:focus-visible,input:focus-visible,select:focus-visible { outline:3px solid color-mix(in srgb,var(--focus) 25%,transparent); outline-offset:2px; }
 }
@@ -114,10 +114,60 @@ select,input { color:var(--text); background:var(--surface); border:1px solid va
 .password-field { position:relative; display:block; }.password-field input { width:100%; padding-right:44px!important; }.password-toggle { position:absolute; right:8px; top:50%; transform:translateY(-50%); width:32px; height:32px; display:grid; place-items:center; border:0; background:transparent; color:var(--text-secondary); cursor:pointer; border-radius:6px; }.password-toggle:hover { background:color-mix(in srgb,var(--text-secondary) 10%,transparent); }.password-toggle svg { width:19px; height:19px; fill:none; stroke:currentColor; stroke-width:1.8; stroke-linecap:round; stroke-linejoin:round; }.demo-users span { color:var(--text-secondary); }.demo-users b { color:var(--text); font-weight:600; }
 .scrim{display:none}
 
+.card { padding:20px; }
+.card > .scroll,.card > .pagination { margin-right:-20px; margin-left:-20px; }
+.card > .scroll:first-child { margin-top:-20px; }
+.card > .pagination:last-child { margin-bottom:-20px; }
+.matrix { padding:0; }
+.matrix > .scroll,.matrix > .pagination { margin-right:0; margin-left:0; }
+.filter-bar { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin:12px 0; min-width:0; }
+.filter-bar > .search { flex:1 1 260px; min-width:min(100%,260px); }
+.filter-bar > select,.filter-bar > input { min-width:140px; }
+.filter-bar > label { display:inline-flex; align-items:center; gap:8px; color:var(--text-secondary); font-size:12px; white-space:nowrap; }
+.filter-bar > label > input[type=date] { width:160px; min-width:0; }
+.tabs { display:flex; gap:4px; margin-bottom:12px; border-bottom:1px solid var(--border); }
+.tabs button { padding:10px 14px; border:0; border-bottom:2px solid transparent; background:transparent; color:var(--text-secondary); font-size:12px; font-weight:600; }
+.tabs button.active { border-bottom-color:var(--accent); color:var(--text); }
+.inline-form { display:flex; align-items:center; gap:8px; margin-top:12px; }
+.inline-form input { flex:1; min-width:0; }
+.tag-list { display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-top:12px; }
+.tag-list > span { display:inline-flex; align-items:center; gap:8px; max-width:100%; padding:6px 9px; border:1px solid var(--border); border-radius:999px; background:var(--background); color:var(--text); font-size:12px; overflow-wrap:anywhere; }
+.tag-list button { padding:2px 4px; border:0; border-radius:4px; background:transparent; color:var(--link); font-size:11px; }
+.tag-list button:last-child { color:var(--danger); font-size:14px; font-weight:600; }
+.empty-state { margin:12px 0; padding:20px; border:1px dashed var(--border); border-radius:var(--radius); background:var(--background); color:var(--text-secondary); text-align:center; }
+.state-preview { grid-template-columns:minmax(0,1fr); }
+.state-preview > div { width:100%; min-width:0; }
+select,input:not([type=checkbox]),textarea { font-size:12px; }
+textarea { width:100%; min-height:88px; padding:10px; border:1px solid var(--border); border-radius:var(--radius); background:var(--surface); color:var(--text); resize:vertical; }
+.btn { font-size:12px; }
+th { font-size:10px; }
+td { font-size:12px; }
+.badge { font-size:10px; }
+.pagination { font-size:11px; }
+.pagination button { font-size:11px; }
+.table-footer { display:flex; align-items:center; justify-content:space-between; gap:16px; padding:8px 14px; border-top:1px solid var(--border); }
+.table-footer .pagination { flex:1; padding:0; border-top:0; }
+.table-total { flex:none; color:var(--text-secondary); font-size:11px; white-space:nowrap; }
+.dashboard-page > .metrics { grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr)); }
+.dashboard-page > .section-space { display:inline-flex; align-items:center; gap:10px; margin-top:20px; color:var(--text-secondary); font-size:12px; font-weight:600; }
+.dashboard-page > .section-space select { min-width:110px; }
+.dashboard-page > .dashboard-grid { margin-top:16px; }
+.dashboard-page .activity .state-preview { margin:12px 0 0; }
+.dashboard-page .activity .state-preview > div { min-height:160px; }
+
 @media(max-width:1000px){
   .sidebar{width:220px;overflow-y:auto}.workspace{margin-left:220px}.metrics{grid-template-columns:1fr 1fr}.dashboard-grid{grid-template-columns:1fr}main{padding:24px}.auth-brand{padding:40px}.auth-copy h1{font-size:38px}.movement-filters{grid-template-columns:1fr 1fr}.bike-summary{grid-template-columns:1fr 1fr}.purchase-metrics{grid-template-columns:1fr 1fr}.kardex-filters,.report-filters{grid-template-columns:1fr 1fr}.finance-report-grid{grid-template-columns:1fr}.catalog-grid,.compatible-grid{grid-template-columns:1fr 1fr}
 }
 @media(max-width:767px){
+  .card { padding:16px; }
+  .card > .scroll,.card > .pagination { margin-right:-16px; margin-left:-16px; }
+  .card > .scroll:first-child { margin-top:-16px; }
+  .card > .pagination:last-child { margin-bottom:-16px; }
+  .filter-bar > .search { flex-basis:100%; }
+  .filter-bar > label { flex:1 1 100%; justify-content:space-between; }
+  .filter-bar > label > input[type=date] { flex:1; width:auto; }
+  .table-footer { align-items:flex-start; flex-wrap:wrap; gap:4px 12px; }
+  .table-footer .pagination { flex-basis:100%; }
   .sidebar{transform:translateX(-100%);transition:.2s}.sidebar.open{transform:none}.workspace{margin-left:0}.scrim{display:block;position:fixed;inset:0;z-index:15;background:color-mix(in srgb,var(--navbar) 55%,transparent);border:0}.mobile-menu{display:block}header{padding:0 16px;height:68px}header>div:first-of-type{margin-right:auto}.top-actions .avatar,.theme-toggle>svg{display:none}.theme-toggle{padding-right:8px}main{padding:18px 16px}.metrics{grid-template-columns:1fr 1fr;gap:10px}.metric{padding:14px}.metric strong{font-size:20px}.section-title{align-items:flex-start}.table-tools{flex-wrap:wrap}.search{min-width:100%}.state-preview,.settings-grid{grid-template-columns:1fr}.auth{display:block;background:var(--background)}.auth-brand{display:none}.auth-form{min-height:100vh;padding:24px}.mobile-brand{display:flex;align-items:center;gap:10px;margin-bottom:48px}.pagination{align-items:flex-start;gap:12px;flex-direction:column}.compat{align-items:flex-start;gap:16px;flex-direction:column}.compat select{width:100%}.form-grid,.adjustment-grid,.order-header{grid-template-columns:1fr}.span-2{grid-column:auto}.movement-filters,.kardex-filters,.report-filters{grid-template-columns:1fr}.form-heading,.form-footer{align-items:flex-start}.form-footer{flex-direction:column}.form-footer .btn{width:100%}.bike-summary,.purchase-metrics,.valuation-metrics{grid-template-columns:1fr}.count-progress{grid-template-columns:1fr auto}.count-progress>i{grid-column:1/-1;grid-row:2}.mapping-list>div{grid-template-columns:1fr}.mapping-list svg{transform:rotate(90deg)}.validation-head{flex-direction:column}.catalog-stepper b{display:none}.receipt-footer{align-items:flex-start;flex-direction:column;gap:14px}.receipt-footer .btn{width:100%}.order-item{grid-template-columns:22px 1fr 60px}.order-item input:nth-of-type(2){display:none}.kardex-product{align-items:flex-start;flex-wrap:wrap;gap:14px}.kardex-product>div:first-child{width:100%}.finance-intro{flex-direction:column;gap:12px}.readonly-filters{grid-template-columns:1fr 1fr}.readonly-filters>span{grid-column:1/-1}.cascade-selects{align-items:stretch;flex-direction:column}.cascade-selects>svg{transform:rotate(90deg);align-self:center;margin:0}.compatible-grid,.catalog-grid{grid-template-columns:1fr}.catalog-header{align-items:flex-start;flex-direction:column;gap:16px}.compact-search{min-width:100%}.technical-sheet{grid-template-columns:1fr;max-height:90vh;overflow:auto}.sheet-image{min-height:230px;height:230px}.sheet-content{padding:24px}
 }
 @media(max-width:420px){
