@@ -25,7 +25,7 @@ interface FormularioProducto {
   unidad: string
   imagenUrl: string
   descripcion: string
-  especificaciones: string
+  especificaciones: Array<{ caracteristica: string; detalle: string }>
   compatibilidadIds: number[]
   activo: boolean
 }
@@ -33,7 +33,7 @@ interface FormularioProducto {
 const inicial: FormularioProducto = {
   codigo: '', nombre: '', categoriaId: '', marcaId: '', precioCompra: '0',
   precioVenta: '0', stockMinimo: '0', unidad: 'UNIDAD', imagenUrl: '',
-  descripcion: '', especificaciones: '{}', compatibilidadIds: [], activo: true,
+  descripcion: '', especificaciones: [], compatibilidadIds: [], activo: true,
 }
 
 export function ProductosPage() {
@@ -141,7 +141,10 @@ export function ProductosPage() {
       precioCompra: String(producto.precioCompra), precioVenta: String(producto.precioVenta),
       stockMinimo: String(producto.stockMinimo), unidad: producto.unidad,
       imagenUrl: producto.imagenUrl ?? '', descripcion: producto.descripcion ?? '',
-      especificaciones: JSON.stringify(producto.especificaciones ?? {}, null, 2),
+      especificaciones: Object.entries(producto.especificaciones ?? {}).map(([caracteristica, detalle]) => ({
+        caracteristica,
+        detalle: typeof detalle === 'string' ? detalle : JSON.stringify(detalle),
+      })),
       compatibilidadIds: producto.compatibilidadIds, activo: producto.activo,
     })
   }
@@ -161,20 +164,24 @@ export function ProductosPage() {
       toast.error('Completa los campos obligatorios con valores válidos.')
       return
     }
-    let parsedSpecifications: unknown
-    try { parsedSpecifications = JSON.parse(form.especificaciones || '{}') }
-    catch { toast.error('Las especificaciones deben ser un objeto JSON válido.'); return }
-    if (typeof parsedSpecifications !== 'object' || parsedSpecifications === null || Array.isArray(parsedSpecifications)) {
-      toast.error('Las especificaciones deben tener formato de objeto JSON.')
+    if (form.especificaciones.some(({ caracteristica, detalle }) => !caracteristica.trim() || !detalle.trim())) {
+      toast.error('Completa la característica y su detalle, o quita la fila vacía.')
       return
     }
+    const nombresEspecificaciones = form.especificaciones.map(({ caracteristica }) => caracteristica.trim().toLocaleLowerCase())
+    if (new Set(nombresEspecificaciones).size !== nombresEspecificaciones.length) {
+      toast.error('No repitas el nombre de una característica.')
+      return
+    }
+    const especificaciones = Object.fromEntries(form.especificaciones
+      .map(({ caracteristica, detalle }) => [caracteristica.trim(), detalle.trim()]))
     guardar.mutate({
       codigo: form.codigo.trim(), nombre: form.nombre.trim(), categoriaId: Number(form.categoriaId),
       marcaId: form.marcaId ? Number(form.marcaId) : null,
       precioCompra: Number(form.precioCompra), precioVenta: Number(form.precioVenta),
       stockMinimo: Number(form.stockMinimo), unidad: form.unidad.trim(), activo: form.activo,
       imagenUrl: form.imagenUrl.trim() || null, descripcion: form.descripcion.trim() || null,
-      especificaciones: parsedSpecifications as Record<string, unknown>,
+      especificaciones,
       compatibilidadIds: form.compatibilidadIds,
     })
   }
@@ -231,8 +238,9 @@ export function ProductosPage() {
           <button aria-label={`Eliminar marca ${marca.nombre}`} onClick={() => setGestion({ tipo: 'marca', registro: marca })}>×</button></span>)}</div>
       </section>
     </div>}
-    {editar && <FormModal title={editar === 'nuevo' ? 'Crear producto' : `Editar ${editar.codigo}`} onClose={() => setEditar(null)}>
-      <form className="form-grid" onSubmit={guardarProducto}>
+    {editar && <FormModal title={editar === 'nuevo' ? 'Crear producto' : `Editar ${editar.codigo}`}
+      onClose={() => setEditar(null)} modalClassName="product-modal">
+      <form className="form-grid product-form" onSubmit={guardarProducto}>
         <label>Código<input required maxLength={60} value={form.codigo} onChange={(event) => setForm({ ...form, codigo: event.target.value })} /></label>
         <label>Nombre<input required maxLength={180} value={form.nombre} onChange={(event) => setForm({ ...form, nombre: event.target.value })} /></label>
         <label>Categoría<select required value={form.categoriaId} onChange={(event) => setForm({ ...form, categoriaId: event.target.value })}>
@@ -245,15 +253,34 @@ export function ProductosPage() {
         <label>Unidad<input required maxLength={30} value={form.unidad} onChange={(event) => setForm({ ...form, unidad: event.target.value })} /></label>
         <label>Imagen URL<input type="url" value={form.imagenUrl} onChange={(event) => setForm({ ...form, imagenUrl: event.target.value })} /></label>
         <label>Descripción<textarea value={form.descripcion} onChange={(event) => setForm({ ...form, descripcion: event.target.value })} /></label>
-        <label>Especificaciones (JSON)<textarea required value={form.especificaciones}
-          onChange={(event) => setForm({ ...form, especificaciones: event.target.value })} /></label>
-        <fieldset><legend>Compatibilidad con modelos</legend>{dataModelos.contenido.map((modelo) =>
+        <fieldset className="specifications-editor">
+          <legend>Características del producto</legend>
+          <p>Agrega datos como cilindrada, material o medidas.</p>
+          {form.especificaciones.map((especificacion, index) => <div className="specification-row" key={index}>
+            <label>Característica<input value={especificacion.caracteristica} placeholder="Ej. Cilindrada"
+              onChange={(event) => setForm({ ...form, especificaciones: form.especificaciones.map((item, fila) =>
+                fila === index ? { ...item, caracteristica: event.target.value } : item) })} /></label>
+            <label>Detalle<input value={especificacion.detalle} placeholder="Ej. 150 cc"
+              onChange={(event) => setForm({ ...form, especificaciones: form.especificaciones.map((item, fila) =>
+                fila === index ? { ...item, detalle: event.target.value } : item) })} /></label>
+            <button type="button" className="btn ghost" aria-label="Quitar característica"
+              onClick={() => setForm({ ...form, especificaciones: form.especificaciones.filter((_, fila) => fila !== index) })}>
+              Quitar
+            </button>
+          </div>)}
+          <button type="button" className="btn secondary specification-add"
+            onClick={() => setForm({ ...form, especificaciones: [...form.especificaciones, { caracteristica: '', detalle: '' }] })}>
+            Añadir característica
+          </button>
+        </fieldset>
+        <fieldset className="compatibility-fieldset"><legend>Compatibilidad con modelos</legend>{dataModelos.contenido.map((modelo) =>
           <label key={modelo.id}><input type="checkbox" checked={form.compatibilidadIds.includes(modelo.id)}
             onChange={(event) => setForm({ ...form, compatibilidadIds: event.target.checked
               ? [...form.compatibilidadIds, modelo.id] : form.compatibilidadIds.filter((id) => id !== modelo.id) })} />
             {modelo.marca} {modelo.nombre} {modelo.anioInicio ?? ''}{modelo.anioFin ? `–${modelo.anioFin}` : ''}
           </label>)}</fieldset>
-        <label><input type="checkbox" checked={form.activo} onChange={(event) => setForm({ ...form, activo: event.target.checked })} /> Activo</label>
+        <label className="product-active"><input type="checkbox" checked={form.activo}
+          onChange={(event) => setForm({ ...form, activo: event.target.checked })} /> Activo</label>
         <div className="modal-actions"><button type="button" className="btn secondary" onClick={() => setEditar(null)}>Cancelar</button>
           <button className="btn primary" disabled={guardar.isPending}>{guardar.isPending ? 'Guardando…' : 'Guardar producto'}</button></div>
       </form>

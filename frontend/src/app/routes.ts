@@ -18,7 +18,7 @@ export const rutas: RutaNavegacion[] = [
   { label: 'Movimientos', path: '/almacen/movimientos', permiso: 'INVENTARIO_VER', grupo: 'MOVIMIENTOS' },
   { label: 'Entradas', path: '/almacen/entradas', permiso: 'INVENTARIO_EDITAR', grupo: 'MOVIMIENTOS' },
   { label: 'Salidas', path: '/almacen/salidas', permiso: 'INVENTARIO_EDITAR', grupo: 'MOVIMIENTOS' },
-  { label: 'Transferencias', path: '/almacen/transferencias', permiso: 'TRANSFERENCIA_EDITAR', grupo: 'MOVIMIENTOS' },
+  { label: 'Transferencias', path: '/almacen/transferencias', permiso: 'INVENTARIO_VER', grupo: 'MOVIMIENTOS' },
   { label: 'Conteo físico', path: '/almacen/conteo-fisico', permiso: 'CONTEO_EDITAR', grupo: 'MOVIMIENTOS' },
   { label: 'Ajustes', path: '/almacen/ajustes', permiso: 'AJUSTE_SOLICITAR', grupo: 'MOVIMIENTOS' },
   { label: 'Productos', path: '/catalogo/productos', permiso: 'PRODUCTO_VER', grupo: 'CATÁLOGO' },
