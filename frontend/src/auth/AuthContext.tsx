@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { cerrarSesion, consultarSesion, iniciarSesion } from '../api/auth'
 import { ApiError, hayTokenCsrf } from '../api/client'
 import type { UsuarioSesion } from '../api/types'
+import { useQueryClient } from '@tanstack/react-query'
 
 interface AuthContextValue {
   /** Usuario con sesión iniciada, o null si no hay sesión. */
@@ -17,6 +18,7 @@ interface AuthContextValue {
 const AuthContext = createContext<AuthContextValue | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient()
   const [usuario, setUsuario] = useState<UsuarioSesion | null>(null)
   const [cargando, setCargando] = useState(true)
 
@@ -37,6 +39,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  useEffect(() => {
+    const invalidarSesion = () => {
+      setUsuario(null)
+      queryClient.clear()
+    }
+    window.addEventListener('api:unauthorized', invalidarSesion)
+    return () => window.removeEventListener('api:unauthorized', invalidarSesion)
+  }, [queryClient])
+
   const login = useCallback(async (email: string, password: string) => {
     if (!hayTokenCsrf()) {
       await consultarSesion().catch(() => undefined)
@@ -51,8 +62,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await cerrarSesion()
     } finally {
       setUsuario(null)
+      queryClient.clear()
     }
-  }, [])
+  }, [queryClient])
 
   const valor = useMemo<AuthContextValue>(
     () => ({

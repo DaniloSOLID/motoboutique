@@ -34,8 +34,14 @@ class UsuarioDetailsService implements UserDetailsService {
         if (email == null || email.isBlank()) {
             throw new UsernameNotFoundException("Usuario no encontrado");
         }
-        Usuario usuario = usuarioRepository.findByEmailIgnoreCaseAndEliminadoFalse(email.trim())
-                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
+        String identificador = email.trim();
+        Usuario usuario = identificador.contains("@")
+                ? usuarioRepository.findByEmailIgnoreCaseAndEliminadoFalse(identificador).orElse(null)
+                : usuarioRepository.findByNombreIgnoreCaseAndEliminadoFalse(identificador)
+                        .orElseGet(() -> usuarioRepository.findByEmailIgnoreCaseAndEliminadoFalse(identificador).orElse(null));
+        if (usuario == null) {
+            throw new UsernameNotFoundException("Usuario no encontrado");
+        }
 
         return new UsuarioAutenticado(usuario.getId(), usuario.getNombre(), usuario.getEmail(),
                 usuario.getPassword(), usuario.isActivo(), autoridadesDe(usuario));

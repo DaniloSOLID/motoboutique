@@ -7,6 +7,7 @@ import com.motoboutique.seguridad.dto.UsuarioDto;
 import com.motoboutique.seguridad.dto.UsuarioMapper;
 import com.motoboutique.seguridad.repository.RolRepository;
 import com.motoboutique.seguridad.repository.UsuarioRepository;
+import com.motoboutique.shared.audit.AuditoriaService;
 import com.motoboutique.shared.exception.NegocioException;
 import com.motoboutique.shared.exception.RecursoNoEncontradoException;
 import java.nio.charset.StandardCharsets;
@@ -18,6 +19,10 @@ import java.util.Locale;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import com.motoboutique.shared.web.PageResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -38,6 +43,7 @@ class UsuarioServiceImpl implements UsuarioService {
     private final RolRepository rolRepository;
     private final PasswordEncoder passwordEncoder;
     private final UsuarioMapper usuarioMapper;
+    private final AuditoriaService auditoriaService;
 
     @Override
     @Transactional
@@ -95,6 +101,125 @@ class UsuarioServiceImpl implements UsuarioService {
                 .orElseThrow(() -> RecursoNoEncontradoException.de("Usuario", usuarioId));
         usuario.setPassword(passwordEncoder.encode(passwordNueva));
         log.info("Contraseña actualizada para el usuario con id {}", usuarioId);
+    }
+
+    @Override
+    public PageResponse<UsuarioDto> listar(String q, Boolean activo, String rol, int page, int size,
+            String sort, String direction) {
+        validarPaginacion(page, size);
+        String campo = switch (sort == null ? "nombre" : sort) {
+            case "email" -> "email";
+            case "creadoEn" -> "creadoEn";
+            default -> "nombre";
+        };
+        Sort.Direction sentido = "desc".equalsIgnoreCase(direction)
+                ? Sort.Direction.DESC : Sort.Direction.ASC;
+        Specification<Usuario> spec = (root, query, cb) -> {
+            var filtros = new java.util.ArrayList<jakarta.persistence.criteria.Predicate>();
+            filtros.add(cb.isFalse(root.get("eliminado")));
+            if (q != null && !q.isBlank()) {
+                String patron = "%" + q.trim().toLowerCase(Locale.ROOT) + "%";
+                filtros.add(cb.or(cb.like(cb.lower(root.get("nombre")), patron),
+                        cb.like(cb.lower(root.get("email")), patron)));
+            }
+            if (activo != null) {
+                filtros.add(cb.equal(root.get("activo"), activo));
+            }
+            if (rol != null && !rol.isBlank()) {
+                var subconsulta = query.subquery(Long.class);
+                var usuarioRelacionado = subconsulta.from(Usuario.class);
+                subconsulta.select(usuarioRelacionado.get("id")).where(
+                        cb.equal(usuarioRelacionado.get("id"), root.get("id")),
+                        cb.equal(usuarioRelacionado.join("roles").get("codigo"), rol.trim()));
+                filtros.add(cb.exists(subconsulta));
+            }
+            return cb.and(filtros.toArray(jakarta.persistence.criteria.Predicate[]::new));
+        };
+        return PageResponse.de(usuarioRepository.findAll(spec, PageRequest.of(page, size,
+                Sort.by(sentido, campo))), usuarioMapper::toDto);
+    }
+
+    @Override
+    @Transactional
+    public UsuarioDto editar(Long id, String nombre, String email, Collection<String> codigosRoles,
+            Boolean activo, Long actorId) {
+        Usuario usuario = usuarioRepository.buscarConRoles(id)
+                .filter(u -> !u.isEliminado())
+                .orElseThrow(() -> RecursoNoEncontradoException.de("Usuario", id));
+        String emailNormalizado = normalizarEmail(email);
+        if (usuarioRepository.existsByEmailIgnoreCaseAndIdNot(emailNormalizado, id)) {
+            throw new NegocioException("Ya existe un usuario con ese correo.");
+        }
+        Set<Rol> rolesNuevos = resolverRoles(codigosRoles);
+        if (actorId.equals(id) && Boolean.FALSE.equals(activo)) {
+            throw new NegocioException("No puedes desactivar tu propio usuario.");
+        }
+        boolean eliminaAdmin = usuario.isActivo() && usuario.tieneRol("ADMIN")
+                && (Boolean.FALSE.equals(activo)
+                    || rolesNuevos.stream().noneMatch(r -> "ADMIN".equals(r.getCodigo())));
+        if (eliminaAdmin && usuarioRepository.contarActivosConRol("ADMIN") <= 1) {
+            throw new NegocioException("No se puede desactivar ni quitar el rol del último administrador activo.");
+        }
+        usuario.setNombre(nombre.trim());
+        usuario.setEmail(emailNormalizado);
+        usuario.setRoles(rolesNuevos);
+        if (activo != null) {
+            usuario.setActivo(activo);
+        }
+        auditoriaService.registrar("EDITAR_USUARIO", "USUARIO", id.toString(),
+                "Se actualizaron los datos del usuario.");
+        return usuarioMapper.toDto(usuario);
+    }
+
+    @Override
+    @Transactional
+    public void cambiarEstado(Long id, boolean activo, Long actorId) {
+        Usuario usuario = usuarioRepository.buscarConRoles(id)
+                .filter(u -> !u.isEliminado())
+                .orElseThrow(() -> RecursoNoEncontradoException.de("Usuario", id));
+        if (actorId.equals(id) && !activo) {
+            throw new NegocioException("No puedes desactivar tu propio usuario.");
+        }
+        protegerUltimoAdmin(usuario, activo);
+        usuario.setActivo(activo);
+        auditoriaService.registrar(activo ? "ACTIVAR_USUARIO" : "DESACTIVAR_USUARIO",
+                "USUARIO", id.toString(), null);
+    }
+
+    @Override
+    @Transactional
+    public void eliminar(Long id, Long actorId) {
+        if (actorId.equals(id)) {
+            throw new NegocioException("No puedes eliminar tu propio usuario.");
+        }
+        Usuario usuario = usuarioRepository.buscarConRoles(id)
+                .filter(u -> !u.isEliminado())
+                .orElseThrow(() -> RecursoNoEncontradoException.de("Usuario", id));
+        protegerUltimoAdmin(usuario, false);
+        usuario.marcarEliminado();
+        usuario.setActivo(false);
+        auditoriaService.registrar("ELIMINAR_USUARIO", "USUARIO", id.toString(), null);
+    }
+
+    @Override
+    @Transactional
+    public void restablecerPasswordAdmin(Long id, String passwordNueva) {
+        cambiarPassword(id, passwordNueva);
+        auditoriaService.registrar("RESTABLECER_PASSWORD", "USUARIO", id.toString(),
+                "Contraseña restablecida por un administrador.");
+    }
+
+    private void protegerUltimoAdmin(Usuario usuario, boolean nuevoActivo) {
+        if (usuario.isActivo() && usuario.tieneRol("ADMIN") && !nuevoActivo
+                && usuarioRepository.contarActivosConRol("ADMIN") <= 1) {
+            throw new NegocioException("No se puede desactivar ni eliminar al último administrador activo.");
+        }
+    }
+
+    private void validarPaginacion(int page, int size) {
+        if (page < 0 || size < 1 || size > 200) {
+            throw new NegocioException("La página o el tamaño no son válidos.");
+        }
     }
 
     // ------------------------------------------------------------------

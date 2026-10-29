@@ -1,0 +1,11 @@
+package com.motoboutique.inventario.dto;
+
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
+import jakarta.validation.constraints.NotNull;
+import java.math.BigDecimal;
+
+public record TransferenciaDetalleSolicitudDto(@NotNull Long productoId,
+                                               @NotNull @DecimalMin("0.001")
+                                               @Digits(integer = 11, fraction = 3) BigDecimal cantidad) {
+}

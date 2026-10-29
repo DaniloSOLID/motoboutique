@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -16,6 +17,7 @@ import com.motoboutique.seguridad.dto.RolMapperImpl;
 import com.motoboutique.seguridad.repository.PermisoRepository;
 import com.motoboutique.seguridad.repository.RolRepository;
 import com.motoboutique.shared.exception.NegocioException;
+import com.motoboutique.shared.audit.AuditoriaService;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -34,11 +36,15 @@ class RolServiceImplTest {
     @Mock
     private PermisoRepository permisoRepository;
 
+    @Mock
+    private AuditoriaService auditoriaService;
+
     private RolServiceImpl servicio;
 
     @BeforeEach
     void preparar() {
-        servicio = new RolServiceImpl(rolRepository, permisoRepository, new RolMapperImpl());
+        servicio = new RolServiceImpl(rolRepository, permisoRepository, new RolMapperImpl(),
+                auditoriaService);
     }
 
     private static Permiso permiso(String codigo) {
@@ -65,19 +71,18 @@ class RolServiceImplTest {
     }
 
     @Test
-    void asegurarAgregaPermisosNuevosSinQuitarLosExistentesNiCambiarElNombre() {
+    void asegurarConservaPermisosEditadosEnRolesExistentes() {
         Rol existente = new Rol();
         existente.setCodigo("ALMACENERO");
         existente.setNombre("Nombre editado por el administrador");
         existente.getPermisos().add(permiso("PRODUCTO_VER"));
-        when(permisoRepository.findByCodigoIn(anyCollection())).thenReturn(List.of(permiso("STOCK_EDITAR")));
         when(rolRepository.findByCodigo("ALMACENERO")).thenReturn(Optional.of(existente));
         when(rolRepository.save(any(Rol.class))).thenAnswer(invocacion -> invocacion.getArgument(0));
 
         RolDto resultado = servicio.asegurar("ALMACENERO", "Almacenero", "Descripción", true,
                 Set.of("STOCK_EDITAR"));
 
-        assertEquals(List.of("PRODUCTO_VER", "STOCK_EDITAR"), resultado.getPermisos());
+        assertEquals(List.of("PRODUCTO_VER"), resultado.getPermisos());
         assertEquals("Nombre editado por el administrador", resultado.getNombre());
     }
 
@@ -90,5 +95,31 @@ class RolServiceImplTest {
 
         assertTrue(error.getMessage().contains("NO_EXISTE"));
         verify(rolRepository, never()).save(any());
+    }
+
+    @Test
+    void noPermiteReducirPermisosDeAdmin() {
+        Rol admin = new Rol();
+        admin.setCodigo("ADMIN");
+        admin.getPermisos().add(permiso("ROL_VER"));
+        when(rolRepository.findById(3L)).thenReturn(Optional.of(admin));
+
+        assertThrows(NegocioException.class, () -> servicio.actualizarPermisos(3L, Set.of()));
+
+        verify(rolRepository, never()).save(any());
+    }
+
+    @Test
+    void noPermiteQuitarRolEditarAlUltimoRolQueLoTiene() {
+        Rol rol = new Rol();
+        rol.setCodigo("CONTADOR");
+        rol.getPermisos().add(permiso("ROL_EDITAR"));
+        when(rolRepository.findById(4L)).thenReturn(Optional.of(rol));
+        when(rolRepository.contarRolesConPermiso("ROL_EDITAR")).thenReturn(1L);
+
+        assertThrows(NegocioException.class, () -> servicio.actualizarPermisos(4L, Set.of()));
+
+        verify(rolRepository, never()).save(any());
+        verify(rolRepository, times(1)).contarRolesConPermiso("ROL_EDITAR");
     }
 }

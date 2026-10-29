@@ -86,3 +86,56 @@ motoboutique/
 7. Layout general, navegación, modo oscuro y los módulos de los casos de uso del diagrama (catálogo, movimientos de inventario, compras, administración, reportes y consulta): fases posteriores.
 8. Despliegue (Docker, CI) y `ENV` de producción del frontend: no solicitado en esta fase.
 9. Revisar y cambiar la contraseña `admin` que estuvo en `application.properties` (punto 7 de cambios).
+
+## 6. Avance de la Fase 2 — Backend
+
+**Implementado:**
+- Se agregaron migraciones Flyway de catálogo (V10), inventario (V20), compras (V30) y unidades de moto (V40), con claves, índices y restricciones de integridad para PostgreSQL.
+- Se implementó el dominio, repositorios y API REST de categorías, marcas y productos, incluyendo compatibilidades con modelos de moto.
+- CRUD de catálogo, validaciones de nombres/códigos únicos, precios, stock mínimo y eliminación lógica mediante servicios transaccionales.
+- Los permisos granulares de catálogo, inventario y compras se incorporaron al seeder; se asignaron permisos a los roles ALMACENERO, CONTADOR y CONSULTA según el principio de menor privilegio.
+- Se agregó una prueba de reglas de negocio del catálogo.
+
+**Endpoints incorporados:**
+- `GET/POST /api/catalogo/categorias`
+- `PUT/DELETE /api/catalogo/categorias/{id}`
+- `GET/POST /api/catalogo/marcas`
+- `PUT/DELETE /api/catalogo/marcas/{id}`
+- `GET/POST /api/catalogo/productos`
+- `GET/PUT/DELETE /api/catalogo/productos/{id}`
+
+**Pruebas y comprobaciones:**
+- Resultado actualizado: compilación Maven correcta y **48 pruebas aprobadas, 0 fallos**, con `./mvnw test -Dtest="*Test"`.
+- La compilación de producción se verificó con `./mvnw -DskipTests compile`.
+- No fue posible validar las migraciones ni arrancar la API contra PostgreSQL en este entorno; queda indicado como comprobación pendiente en la máquina con la base configurada.
+
+**Pendientes derivados del alcance:**
+- Completar entidades, servicios y controladores de almacenes, stock, kardex, transferencias, conteo físico, ajustes, proveedores, órdenes, recepciones y movimientos de unidad/moto.
+- Añadir pruebas MockMvc de autorización por rol, validación y respuestas 401/403 para los nuevos endpoints.
+- Ejecutar y validar las migraciones V10–V40 contra PostgreSQL real; las migraciones existentes con entidades no forman parte de un entorno de prueba sin base de datos.
+- Completar reportes PDF/Excel y KPIs de valorización una vez estén disponibles stock, kardex y compras.
+- Mantener el frontend sin cambios estructurales; cualquier consumo nuevo debe adaptarse al contrato REST existente.
+
+## 7. Avance de la Fase 3 — Frontend
+
+**Implementado:**
+- Navegación independiente con barra lateral adaptable, panel principal y ruta protegida `/catalogo`.
+- Interfaz real conectada a los endpoints del catálogo implementados en el backend: categorías, marcas y productos.
+- Listados, estados de carga, estados vacíos, errores, formularios con validación HTML y confirmaciones de eliminación.
+- Visibilidad de rutas y acciones según roles/permisos (`ADMIN`, `PRODUCTO_EDITAR`, `PRODUCTO_VER`).
+- Actualización dinámica después de altas y eliminaciones, sin operaciones simuladas.
+- Conservado el cliente API con sesiones, cookies, CSRF y `VITE_API_BASE_URL`.
+
+**Conexiones comprobadas por contrato:**
+- `GET/POST/PUT/DELETE /api/catalogo/categorias`
+- `GET/POST/PUT/DELETE /api/catalogo/marcas`
+- `GET/POST/PUT/DELETE /api/catalogo/productos`
+
+**Comprobaciones:**
+- `npm install`: 47 paquetes instalados, 0 vulnerabilidades reportadas.
+- `npm run build`: compilación TypeScript y build Vite correctos.
+
+**Pendientes/dependencias reales:**
+- Inventario, movimientos, conteo físico, ajustes, transferencias, compras, proveedores, recepciones, unidades de moto y reportes requieren endpoints backend aún no implementados; el frontend solo informa la dependencia y no muestra acciones ficticias.
+- Faltan pruebas frontend automatizadas.
+- Validación visual y de punta a punta requiere backend activo contra PostgreSQL y navegador disponible.

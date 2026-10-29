@@ -6,6 +6,7 @@ import com.motoboutique.shared.exception.NegocioException;
 import java.util.List;
 import java.util.Set;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.core.annotation.Order;
@@ -24,17 +25,31 @@ class SeederUsuariosDemo implements SeederFase {
     private record UsuarioDemo(String nombre, String email, String rol) {
     }
 
-    private static final List<UsuarioDemo> USUARIOS = List.of(
-            new UsuarioDemo("Demo Almacenero", "almacenero@motoboutique.local", "ALMACENERO"),
-            new UsuarioDemo("Demo Contador", "contador@motoboutique.local", "CONTADOR"),
-            new UsuarioDemo("Demo Consulta", "consulta@motoboutique.local", "CONSULTA"));
-
     private final UsuarioService usuarioService;
     private final String demoPassword;
+    private final boolean resetPasswords;
+    private final List<UsuarioDemo> usuarios;
 
-    SeederUsuariosDemo(UsuarioService usuarioService, @Value("${DEMO_PASSWORD:}") String demoPassword) {
+    @Autowired
+    SeederUsuariosDemo(UsuarioService usuarioService,
+                      @Value("${DEMO_PASSWORD:}") String demoPassword,
+                      @Value("${ALMACENERO_EMAIL:almacenero@motoboutique.local}") String almaceneroEmail,
+                      @Value("${CONTADOR_EMAIL:contador@motoboutique.local}") String contadorEmail,
+                      @Value("${CONSULTA_EMAIL:consulta@motoboutique.local}") String consultaEmail,
+                      @Value("${app.seed.reset-passwords:false}") boolean resetPasswords) {
         this.usuarioService = usuarioService;
         this.demoPassword = demoPassword;
+        this.resetPasswords = resetPasswords;
+        this.usuarios = List.of(
+                new UsuarioDemo("almacenero", almaceneroEmail, "ALMACENERO"),
+                new UsuarioDemo("contador", contadorEmail, "CONTADOR"),
+                new UsuarioDemo("consulta", consultaEmail, "CONSULTA"));
+    }
+
+    SeederUsuariosDemo(UsuarioService usuarioService, String demoPassword) {
+        this(usuarioService, demoPassword,
+                "almacenero@motoboutique.local", "contador@motoboutique.local",
+                "consulta@motoboutique.local", false);
     }
 
     @Override
@@ -43,8 +58,12 @@ class SeederUsuariosDemo implements SeederFase {
             log.info("Usuarios demo omitidos: falta la variable DEMO_PASSWORD");
             return;
         }
-        for (UsuarioDemo demo : USUARIOS) {
+        for (UsuarioDemo demo : usuarios) {
             if (usuarioService.existeEmail(demo.email())) {
+                if (resetPasswords) {
+                    usuarioService.buscarPorEmail(demo.email()).ifPresent(usuario ->
+                            usuarioService.cambiarPassword(usuario.getId(), demoPassword));
+                }
                 continue;
             }
             try {

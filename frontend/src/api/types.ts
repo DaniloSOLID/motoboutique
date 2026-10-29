@@ -50,6 +50,103 @@ export interface PageResponse<T> {
   hasta: number
 }
 
+export interface Categoria {
+  id: number
+  nombre: string
+  descripcion: string | null
+  activo: boolean
+}
+
+export interface CategoriaGuardar {
+  nombre: string
+  descripcion?: string | null
+  activo?: boolean
+}
+
+export interface Marca {
+  id: number
+  nombre: string
+  descripcion: string | null
+  activo: boolean
+}
+
+export interface MarcaGuardar {
+  nombre: string
+  descripcion?: string | null
+  activo?: boolean
+}
+
+export interface Producto {
+  id: number
+  categoriaId: number
+  categoria: string
+  marcaId: number | null
+  marca: string | null
+  codigo: string
+  nombre: string
+  descripcion: string | null
+  precioCompra: number
+  precioVenta: number
+  stockMinimo: number
+  unidad: string
+  activo: boolean
+  compatibilidadIds: number[]
+  compatibilidades: ModeloMoto[]
+  imagenUrl: string | null
+  especificaciones: Record<string, unknown>
+  stockTotal: number
+  stockPorAlmacen: StockProducto[]
+}
+
+export interface StockProducto {
+  almacenId: number
+  almacen: string | null
+  cantidad: number
+  reservado: number
+}
+
+export interface ModeloMoto {
+  id: number
+  marcaId: number
+  marca: string
+  nombre: string
+  anioInicio: number | null
+  anioFin: number | null
+  cilindradaCc: number | null
+  tipo: string | null
+}
+
+export interface ModeloMotoGuardar {
+  marcaId: number
+  nombre: string
+  anioInicio?: number | null
+  anioFin?: number | null
+  cilindradaCc?: number | null
+  tipo?: string | null
+}
+
+export interface MarcaModeloArbol {
+  id: number
+  nombre: string
+  modelos: ModeloMoto[]
+}
+
+export interface ProductoGuardar {
+  categoriaId: number
+  marcaId?: number | null
+  codigo: string
+  nombre: string
+  descripcion?: string | null
+  precioCompra: number
+  precioVenta: number
+  stockMinimo: number
+  unidad: string
+  activo?: boolean
+  imagenUrl?: string | null
+  especificaciones?: Record<string, unknown>
+  compatibilidadIds?: number[]
+}
+
 /** Error de la API (ProblemDetail, RFC 9457). */
 export interface ProblemDetail {
   type?: string

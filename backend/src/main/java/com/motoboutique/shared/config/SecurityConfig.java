@@ -50,6 +50,7 @@ public class SecurityConfig {
     public SecurityFilterChain filtroDeSeguridad(HttpSecurity http) throws Exception {
         http
                 .cors(Customizer.withDefaults())
+                .httpBasic(basic -> basic.disable())
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         // Manejador sin ofuscación (BREACH): el frontend lee el valor de la cookie
@@ -57,7 +58,8 @@ public class SecurityConfig {
                         .csrfTokenRequestHandler(new CsrfTokenRequestAttributeHandler()))
                 .authorizeHttpRequests(autorizacion -> autorizacion
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
-                        .requestMatchers(RUTA_LOGIN, "/error").permitAll()
+                        .requestMatchers(RUTA_LOGIN, "/api/auth/recuperar",
+                                "/api/auth/restablecer", "/error").permitAll()
                         .anyRequest().authenticated())
                 .formLogin(formulario -> formulario
                         // loginPage evita que Spring genere su propia pantalla de login HTML.
@@ -69,7 +71,7 @@ public class SecurityConfig {
                                 response.setStatus(HttpStatus.NO_CONTENT.value()))
                         .failureHandler((request, response, excepcion) ->
                                 RespuestasSeguridad.escribir(response, 401, "No se pudo iniciar sesión",
-                                        "Correo o contraseña incorrectos."))
+                                        "Usuario o contraseña incorrectos."))
                         .permitAll())
                 .logout(salida -> salida
                         .logoutUrl(RUTA_LOGOUT)

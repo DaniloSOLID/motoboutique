@@ -9,9 +9,8 @@ import java.util.Optional;
 public interface RolService {
 
     /**
-     * Crea el rol si no existe y garantiza que tenga, como mínimo, los permisos indicados.
-     * Nunca quita permisos ni cambia el nombre o la descripción de un rol ya existente, para
-     * respetar lo que haya configurado el administrador. Es idempotente (DataSeeder).
+     * Crea el rol con los permisos iniciales cuando no existe. No sincroniza roles ya creados:
+     * los permisos asignados manualmente por administración deben persistir entre reinicios.
      *
      * @throws com.motoboutique.shared.exception.NegocioException si algún permiso no existe
      */
@@ -21,4 +20,6 @@ public interface RolService {
     List<RolDto> listar();
 
     Optional<RolDto> buscarPorCodigo(String codigo);
+
+    RolDto actualizarPermisos(Long id, Collection<String> codigosPermisos);
 }

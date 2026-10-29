@@ -81,6 +81,38 @@ El frontend todavía no tiene pruebas automatizadas (ver `PROGRESS.md`); `npm ru
 
 Los archivos `.env` no se suben a Git. Los `.env.example` no contienen credenciales reales.
 
+## Conectar a Supabase
+
+Supabase proporciona PostgreSQL compatible con el backend. Para usarla como base de datos:
+
+1. Crea un proyecto nuevo en https://supabase.com/dashboard.
+2. En **Project Settings > Database**, copia el host PostgreSQL, puerto, usuario, nombre de base y contraseña.
+3. Edita `backend/.env` con esos datos:
+
+   ```properties
+   DB_HOST=db.TU-PROYECTO.supabase.co
+   DB_PORT=5432
+   DB_NAME=postgres
+   DB_USER=postgres
+   DB_PASSWORD=TU_CONTRASENA
+   ```
+
+4. Arranca el backend. Flyway crea o actualiza las tablas automáticamente, incluida `estado_aplicacion` para los datos editables del frontend.
+5. Si la contraseña contiene caracteres especiales, usa su codificación URL cuando corresponda.
+6. Para producción configura también el host permitido del frontend:
+
+   ```properties
+   CORS_ALLOWED_ORIGINS=https://tu-frontend.tudominio.com
+   ```
+
+> Supabase es solo la base de datos PostgreSQL. El frontend debe seguir enviando las peticiones al backend; no se recomienda exponer directamente la clave `service_role` ni las tablas desde el navegador.
+
+### Conexión obligatoria del backend
+
+El backend debe usar el rol PostgreSQL `postgres` (no `anon`, ni el usuario de la API REST y no la clave `service_role`). PostgreSQL omite las políticas RLS para ese rol, por lo que el backend puede ejecutar las migraciones y JPA, mientras que las tablas permanecen protegidas frente a la API REST de Supabase. Todas las tablas públicas tienen RLS habilitado desde la migración V55.
+
+`6543` es el puerto del transaction pooler de Supabase. Flyway y JPA pueden perder sesiones, conexiones preparadas o funciones transaccionales. Configura `DB_PORT=5432`, usando el session pooler o la conexión directa, y evita cargar archivos `.env` con un puerto distinto según el entorno.
+
 ## Publicar frontend y backend
 
 Lo más simple es servir ambos bajo el mismo dominio (por ejemplo un proxy inverso que reenvíe `/api` al backend). Si los publicas en dominios distintos, define `VITE_API_BASE_URL` al compilar el frontend, agrega su origen a `CORS_ALLOWED_ORIGINS` y usa `SESSION_COOKIE_SAME_SITE=none` (requiere HTTPS). Ten en cuenta que, entre dominios sin relación, el navegador no deja que el frontend lea la cookie del token CSRF; ver "Tareas pendientes" en `PROGRESS.md`.
