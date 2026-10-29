@@ -1,5 +1,6 @@
 import { detalleHttp, tituloHttp } from './mensajesHttp'
 import type { ProblemDetail } from './types'
+import { toast } from 'sonner'
 
 /** Vacío = mismo origen (en desarrollo Vite reenvía /api al backend). */
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '')
@@ -42,6 +43,38 @@ interface Opciones {
   json?: unknown
   /** Cuerpo de formulario (application/x-www-form-urlencoded). */
   formulario?: Record<string, string>
+  multipart?: FormData
+}
+
+export async function apiBlob(ruta: string): Promise<Blob> {
+  const cabeceras: Record<string, string> = {}
+  const token = leerCookie(COOKIE_CSRF)
+  if (token) cabeceras[CABECERA_CSRF] = token
+  let respuesta: Response
+  try {
+    respuesta = await fetch(`${BASE_URL}${ruta}`, {
+      headers: cabeceras,
+      credentials: 'include',
+    })
+  } catch {
+    throw new ApiError(0, {
+      title: 'Sin conexión con el servidor',
+      detail: 'No se pudo conectar con el servidor. Verifica que el backend esté en ejecución.',
+    })
+  }
+  if (!respuesta.ok) {
+    let problema: ProblemDetail | undefined
+    try { problema = await respuesta.json() as ProblemDetail } catch { problema = undefined }
+    const error = new ApiError(respuesta.status, problema)
+    if (respuesta.status === 401) window.dispatchEvent(new Event('api:unauthorized'))
+    else if (respuesta.status === 403) toast.error('No tienes permiso para realizar esta acción.')
+    throw error
+  }
+  return respuesta.blob()
+}
+
+export async function apiUpload<T>(ruta: string, multipart: FormData): Promise<T> {
+  return apiFetch<T>(ruta, { method: 'POST', multipart })
 }
 
 /**
@@ -59,6 +92,8 @@ export async function apiFetch<T = void>(ruta: string, opciones: Opciones = {}):
   } else if (opciones.formulario) {
     cabeceras['Content-Type'] = 'application/x-www-form-urlencoded'
     cuerpo = new URLSearchParams(opciones.formulario).toString()
+  } else if (opciones.multipart) {
+    cuerpo = opciones.multipart
   }
 
   if (!['GET', 'HEAD', 'OPTIONS'].includes(metodo)) {
@@ -88,7 +123,13 @@ export async function apiFetch<T = void>(ruta: string, opciones: Opciones = {}):
     } catch {
       problema = undefined
     }
-    throw new ApiError(respuesta.status, problema)
+    const error = new ApiError(respuesta.status, problema)
+    if (respuesta.status === 401) {
+      window.dispatchEvent(new Event('api:unauthorized'))
+    } else if (respuesta.status === 403) {
+      toast.error('No tienes permiso para realizar esta acción.')
+    }
+    throw error
   }
 
   if (respuesta.status === 204) return undefined as T

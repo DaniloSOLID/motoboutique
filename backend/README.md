@@ -44,8 +44,12 @@ Al arrancar, Flyway crea las tablas y el `DataSeeder` carga los permisos, los ro
 | `DEMO_PASSWORD` | Contraseña común de los usuarios demo (solo perfil `dev`; si queda vacía no se crean) |
 | `CORS_ALLOWED_ORIGINS` | Orígenes del frontend autorizados, separados por coma (por defecto `http://localhost:5173`) |
 | `SESSION_COOKIE_SAME_SITE` | Solo perfil `prod`: `lax` (por defecto) o `none` si frontend y API están en sitios distintos |
+| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD` | Servidor de correo para recuperación de contraseña en producción |
+| `SMTP_AUTH`, `SMTP_STARTTLS` | Autenticación SMTP y STARTTLS (por defecto `true`) |
+| `FRONTEND_URL` | URL base del frontend para construir el enlace de recuperación |
 
 Usuarios demo (perfil `dev`): `almacenero@`, `contador@` y `consulta@` con el dominio `motoboutique.local`.
+En perfil `dev`, el enlace de recuperación se escribe en el log; fuera de `dev`, se envía al correo con SMTP.
 
 ## API disponible en esta fase
 
@@ -54,6 +58,14 @@ Usuarios demo (perfil `dev`): `almacenero@`, `contador@` y `consulta@` con el do
 | `POST /api/auth/login` | Inicia sesión. Formulario `application/x-www-form-urlencoded` con `email` y `password`. Responde 204 o 401 |
 | `GET /api/auth/me` | Usuario de la sesión actual (id, nombre, correo, roles y permisos). Sin sesión responde 401 |
 | `POST /api/auth/logout` | Cierra la sesión. Responde 204 |
+| `POST /api/auth/recuperar` | Solicita instrucciones; respuesta genérica para correos registrados y no registrados |
+| `POST /api/auth/restablecer` | Restablece contraseña con token de un solo uso, con vencimiento a 30 minutos |
+| `GET /api/roles`, `GET /api/permisos` | Consulta roles y permisos |
+| `PUT /api/roles/{id}/permisos` | Actualiza permisos del rol y registra el cambio en auditoría |
+| `GET /api/auditoria` | Consulta eventos de auditoría con paginación |
+| `GET /api/configuracion`, `PUT /api/configuracion` | Consulta y actualiza la configuración de empresa |
+| `/api/inventario/conteos` | Apertura, listado, actualización de conteos físicos y cierre |
+| `/api/inventario/ajustes`, `/api/aprobaciones` | Solicitudes, consulta y resolución individual o por lote de ajustes |
 
 Autenticación por sesión (cookie `JSESSIONID`). CSRF activo: la cookie `XSRF-TOKEN` debe reenviarse en la cabecera `X-XSRF-TOKEN` en todo POST/PUT/PATCH/DELETE. Los errores se devuelven como `ProblemDetail` (RFC 9457).
 
@@ -89,7 +101,7 @@ Cada módulo tiene sus capas: `web`, `service`, `repository`, `domain` y `dto`.
 1. El **controller** solo maneja HTTP y validación. Cero lógica de negocio.
 2. El **service** contiene las reglas y es `@Transactional`. Un módulo usa a otro solo a través de la **interfaz** de su service, nunca de su repository.
 3. Las entidades no llegan al cliente: la API devuelve **DTOs** (MapStruct).
-4. El stock solo cambia por `InventarioService.registrarMovimiento(...)` (cuando exista). El kardex nunca se edita ni se borra.
+4. El stock solo cambia mediante `MovimientoInventarioService`; el kardex nunca se edita ni se borra.
 5. Dinero y cantidades con `BigDecimal`; nunca `double`.
 6. Toda integración externa va detrás de una interfaz (puerto).
 7. Sin `@Data` en entidades JPA: usar `@Getter` y `@Setter`.
@@ -115,6 +127,6 @@ Cada módulo tiene sus capas: `web`, `service`, `repository`, `domain` y `dto`.
 
 ## Estado del proyecto
 
-- Fase 0 (proyecto base): lista.
-- Fase 1 (seguridad, layout y modo oscuro): la parte de seguridad (login, usuarios, roles, permisos y datos iniciales) está lista. Falta la parte visual: layout, modo oscuro y pantallas de administración (ahora en el frontend React).
+- Seguridad y administración: usuarios, permisos por rol, configuración de empresa, recuperación de contraseñas y auditoría persistida.
+- Inventario: movimientos, transferencias, conteos físicos y aprobaciones de ajustes mediante la vía transaccional de inventario.
 - Siguientes fases: catálogo, inventario, compras, motocicletas, dashboard y reportes.

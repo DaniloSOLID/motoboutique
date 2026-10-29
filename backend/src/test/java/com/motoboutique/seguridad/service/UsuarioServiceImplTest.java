@@ -20,6 +20,7 @@ import com.motoboutique.seguridad.repository.RolRepository;
 import com.motoboutique.seguridad.repository.UsuarioRepository;
 import com.motoboutique.shared.exception.NegocioException;
 import com.motoboutique.shared.exception.RecursoNoEncontradoException;
+import com.motoboutique.shared.audit.AuditoriaService;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -41,6 +42,9 @@ class UsuarioServiceImplTest {
     @Mock
     private RolRepository rolRepository;
 
+    @Mock
+    private AuditoriaService auditoriaService;
+
     /** Encoder real con costo bajo para que las pruebas sean rápidas. */
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder(4);
 
@@ -49,7 +53,7 @@ class UsuarioServiceImplTest {
     @BeforeEach
     void preparar() {
         servicio = new UsuarioServiceImpl(usuarioRepository, rolRepository,
-                passwordEncoder, new UsuarioMapperImpl());
+                passwordEncoder, new UsuarioMapperImpl(), auditoriaService);
     }
 
     private static Rol rol(String codigo) {

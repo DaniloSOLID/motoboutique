@@ -68,7 +68,7 @@ class SeederSeguridadTest {
     }
 
     @Test
-    void soloElAdministradorRecibeLosPermisosDeSeguridad() {
+    void asignaPermisosSegunElRolBase() {
         seeder("Clave-Admin-1").ejecutar();
 
         ArgumentCaptor<String> codigosRol = ArgumentCaptor.forClass(String.class);
@@ -78,10 +78,10 @@ class SeederSeguridadTest {
         for (int i = 0; i < codigosRol.getAllValues().size(); i++) {
             permisosPorRol.put(codigosRol.getAllValues().get(i), permisosCaptor.getAllValues().get(i).size());
         }
-        assertEquals(5, permisosPorRol.get("ADMIN"));
-        assertEquals(0, permisosPorRol.get("ALMACENERO"));
-        assertEquals(0, permisosPorRol.get("CONTADOR"));
-        assertEquals(0, permisosPorRol.get("CONSULTA"));
+        assertEquals(21, permisosPorRol.get("ADMIN"));
+        assertEquals(10, permisosPorRol.get("ALMACENERO"));
+        assertEquals(6, permisosPorRol.get("CONTADOR"));
+        assertEquals(2, permisosPorRol.get("CONSULTA"));
     }
 
     @Test

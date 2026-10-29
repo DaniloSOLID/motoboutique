@@ -15,3 +15,17 @@ export function iniciarSesion(email: string, password: string): Promise<void> {
 export function cerrarSesion(): Promise<void> {
   return apiFetch<void>('/api/auth/logout', { method: 'POST' })
 }
+
+export function solicitarRecuperacion(email: string): Promise<{ mensaje: string }> {
+  return apiFetch<{ mensaje: string }>('/api/auth/recuperar', {
+    method: 'POST',
+    json: { email },
+  })
+}
+
+export function restablecerPassword(token: string, password: string): Promise<void> {
+  return apiFetch<void>('/api/auth/restablecer', {
+    method: 'POST',
+    json: { token, password },
+  })
+}

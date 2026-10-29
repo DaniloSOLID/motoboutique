@@ -37,6 +37,18 @@ Necesitas dos terminales: una para el backend y otra para el frontend.
    ./mvnw spring-boot:run
    ```
 
+   En **PowerShell**, desde `C:\motoboutique\backend`, ejecuta:
+
+   ```powershell
+   .\mvnw.cmd spring-boot:run
+   ```
+
+   En **Símbolo del sistema (cmd.exe)**, desde esa misma carpeta, ejecuta:
+
+   ```bat
+   mvnw.cmd spring-boot:run
+   ```
+
    Flyway crea las tablas y el `DataSeeder` carga permisos, roles base y usuarios. Se puede repetir sin duplicar datos.
 
 ### 2. Frontend (puerto 5173)
@@ -75,6 +87,38 @@ El frontend todavía no tiene pruebas automatizadas (ver `PROGRESS.md`); `npm ru
 **Frontend** (`frontend/.env`, ver `frontend/.env.example`): `VITE_API_BASE_URL` (vacío en desarrollo) y `VITE_DEV_PROXY_TARGET`.
 
 Los archivos `.env` no se suben a Git. Los `.env.example` no contienen credenciales reales.
+
+## Conectar a Supabase
+
+Supabase proporciona PostgreSQL compatible con el backend. Para usarla como base de datos:
+
+1. Crea un proyecto nuevo en https://supabase.com/dashboard.
+2. En **Project Settings > Database**, copia el host PostgreSQL, puerto, usuario, nombre de base y contraseña.
+3. Edita `backend/.env` con esos datos:
+
+   ```properties
+   DB_HOST=db.TU-PROYECTO.supabase.co
+   DB_PORT=5432
+   DB_NAME=postgres
+   DB_USER=postgres
+   DB_PASSWORD=TU_CONTRASENA
+   ```
+
+4. Arranca el backend. Flyway crea o actualiza las tablas automáticamente, incluida `estado_aplicacion` para los datos editables del frontend.
+5. Si la contraseña contiene caracteres especiales, usa su codificación URL cuando corresponda.
+6. Para producción configura también el host permitido del frontend:
+
+   ```properties
+   CORS_ALLOWED_ORIGINS=https://tu-frontend.tudominio.com
+   ```
+
+> Supabase es solo la base de datos PostgreSQL. El frontend debe seguir enviando las peticiones al backend; no se recomienda exponer directamente la clave `service_role` ni las tablas desde el navegador.
+
+### Conexión obligatoria del backend
+
+El backend debe usar el rol PostgreSQL `postgres` (no `anon`, ni el usuario de la API REST y no la clave `service_role`). PostgreSQL omite las políticas RLS para ese rol, por lo que el backend puede ejecutar las migraciones y JPA, mientras que las tablas permanecen protegidas frente a la API REST de Supabase. Todas las tablas públicas tienen RLS habilitado desde la migración V55.
+
+`6543` es el puerto del transaction pooler de Supabase. Flyway y JPA pueden perder sesiones, conexiones preparadas o funciones transaccionales. Configura `DB_PORT=5432`, usando el session pooler o la conexión directa, y evita cargar archivos `.env` con un puerto distinto según el entorno.
 
 ## Publicar frontend y backend
 
